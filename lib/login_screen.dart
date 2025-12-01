@@ -82,8 +82,6 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 50),
 
               // ---------------------------------------------
-              // [수정 완료] 괄호 짝을 완벽하게 맞췄습니다!
-              // ---------------------------------------------
               Transform.rotate(
                 angle: -0.5,
                 child: Image.asset(

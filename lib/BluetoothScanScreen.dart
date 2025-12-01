@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart'; // 블루투스 패키지
 import 'package:permission_handler/permission_handler.dart'; // 권한 패키지
 import 'login_screen.dart';
+import 'device_control_screen.dart'; // 2단계에서 만든 제어 화면 import (파일이 있어야 에러가 안 납니다)
 
 class BluetoothScanScreen extends StatefulWidget {
   const BluetoothScanScreen({super.key});
@@ -164,7 +165,7 @@ class _BluetoothScanScreenState extends State<BluetoothScanScreen> {
                       return const Center(child: Text("기기를 찾지 못했습니다."));
                     }
 
-                    // 이름이 있는 기기만 필터링해서 보여주기 (이름 없는 기기는 너무 많이 뜸)
+                    // 이름이 있는 기기만 필터링
                     final results = snapshot.data!
                         .where((r) => r.device.platformName.isNotEmpty)
                         .toList();
@@ -184,11 +185,35 @@ class _BluetoothScanScreenState extends State<BluetoothScanScreen> {
                             result.device.platformName, // 기기 이름
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          subtitle: Text(result.device.remoteId.toString()), // 기기 ID(Mac 주소 등)
+                          subtitle: Text(result.device.remoteId.toString()), // MAC 주소
                           trailing: ElevatedButton(
-                            onPressed: () {
-                              // 연결 버튼 (실제 연결 로직은 여기에 추가)
-                              print("${result.device.platformName} 연결 시도");
+                            onPressed: () async {
+                              // === [수정된 부분: 연결 로직] ===
+                              try {
+                                // 1. 연결 전 스캔 중지
+                                await FlutterBluePlus.stopScan();
+
+                                // 2. 연결 시도 (블루투스 기기와 통신 시작)
+                                await result.device.connect(autoConnect: false);
+
+                                if (mounted) {
+                                  // 3. 연결 성공 시 제어 화면으로 이동
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      // DeviceControlScreen 파일이 필요합니다.
+                                      builder: (context) => DeviceControlScreen(device: result.device),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                print("연결 실패: $e");
+                                if(mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("연결 실패: $e")),
+                                  );
+                                }
+                              }
                             },
                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFB71C1C)),
                             child: const Text("연결", style: TextStyle(color: Colors.white)),
