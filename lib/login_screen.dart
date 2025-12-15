@@ -15,6 +15,47 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String _errorMessage = '';
 
+  // [비밀번호 찾기 함수]
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    
+    if (email.isEmpty) {
+      _showDialog("이메일 입력", "비밀번호를 재설정할 이메일 주소를 입력해주세요.");
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showDialog("이메일 전송 완료", "비밀번호 재설정 링크가 $email 로 전송되었습니다.\n이메일을 확인해주세요!");
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        _showDialog("오류", "등록되지 않은 이메일입니다.");
+      } else if (e.code == 'invalid-email') {
+        _showDialog("오류", "이메일 형식이 올바르지 않습니다.");
+      } else {
+        _showDialog("오류", "오류가 발생했습니다: ${e.message}");
+      }
+    } catch (e) {
+      _showDialog("오류", "오류가 발생했습니다. 다시 시도해주세요.");
+    }
+  }
+
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("확인", style: TextStyle(color: Color(0xFFD32F2F))),
+          ),
+        ],
+      ),
+    );
+  }
+
   // [로그인 로직 함수]
   Future<void> _signIn() async {
     FocusScope.of(context).unfocus(); // 키보드 내리기
@@ -129,8 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: () {}, child: const Text("아이디 찾기", style: TextStyle(color: Colors.grey))),
-                  TextButton(onPressed: () {}, child: const Text("비밀번호 찾기", style: TextStyle(color: Colors.grey))),
+                  TextButton(
+                    onPressed: _resetPassword,  // 비밀번호 찾기 기능!
+                    child: const Text("비밀번호 찾기", style: TextStyle(color: Colors.grey)),
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -163,19 +206,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 30),
-              const Text("--- 또는 ---", style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 30),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildSocialButton(Icons.g_mobiledata),
-                  _buildSocialButton(Icons.facebook),
-                  _buildSocialButton(Icons.apple),
-                  _buildSocialButton(Icons.chat_bubble),
-                ],
-              ),
               const SizedBox(height: 40),
             ],
           ),
@@ -220,17 +250,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSocialButton(IconData icon) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Center(
-        child: Icon(icon, size: 30, color: Colors.black),
-      ),
-    );
-  }
 }
